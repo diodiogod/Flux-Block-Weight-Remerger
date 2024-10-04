@@ -152,9 +152,9 @@ def get_block_values():
     }
 
     console.print("\n[bold cyan]Available Presets:[/bold cyan]")
-    console.print("[bold green]1.[/bold green] Default Preset 1 (adjusts some layers)")
-    console.print("[bold green]2.[/bold green] Default Preset 2 (adjusts differently)")
-    console.print("[bold green]3.[/bold green] Default Preset 3 (half strength adjustments)")
+    console.print("[bold green]1.[/bold green] Default Preset 1 (This worked ok for a real person lora)")
+    console.print("[bold green]2.[/bold green] Default Preset 2 (ignore, placeholder)")
+    console.print("[bold green]3.[/bold green] Default Preset 3 (ignore, placeholder)")
     console.print("[bold green]4.[/bold green] Custom Values")
 
     preset_choice = Prompt.ask("\nChoose a preset or enter [bold yellow]4[/bold yellow] for custom input", choices=["1", "2", "3", "4"])
