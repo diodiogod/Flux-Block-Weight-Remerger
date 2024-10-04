@@ -9,13 +9,27 @@ console = Console()
 
 def filter_layers_by_keywords(tensor_name, selected_keywords):
     """
-    Checks if the tensor name contains the core keywords (e.g., lora_A, lora_B)
+    Checks if the tensor name contains the core keywords (e.g., lora_A, lora_B, lora_down, lora_up)
     and all additional keywords (e.g., attn, norm).
     If no core keywords are selected, it matches only the additional keywords.
     """
-    # Separate core keywords (lora_A, lora_B) from additional keywords (attn, norm)
-    core_keywords = [kw for kw in selected_keywords if 'lora_' in kw]
-    additional_keywords = [kw for kw in selected_keywords if 'lora_' not in kw]
+    # Map old keywords to new ones
+    keyword_mapping = {
+        "lora_A": ["lora_A", "lora_down"],
+        "lora_B": ["lora_B", "lora_up"]
+    }
+
+    # Expand selected keywords based on the mapping
+    expanded_keywords = []
+    for kw in selected_keywords:
+        if kw in keyword_mapping:
+            expanded_keywords.extend(keyword_mapping[kw])
+        else:
+            expanded_keywords.append(kw)
+
+    # Separate core keywords (lora_A, lora_B, lora_donw, lora_up) from additional keywords (attn, norm)
+    core_keywords = [kw for kw in expanded_keywords if 'lora_' in kw]
+    additional_keywords = [kw for kw in expanded_keywords if 'lora_' not in kw]
 
     # If no core keywords are selected, just match additional keywords
     if not core_keywords:
@@ -29,6 +43,7 @@ def filter_layers_by_keywords(tensor_name, selected_keywords):
     return all(additional_keyword in tensor_name for additional_keyword in additional_keywords)
 
 
+
 def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=False):
     """Filters and adjusts tensors based on target keywords and optionally removes those set to zero."""
     
@@ -36,24 +51,35 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
         raise ValueError(f"Expected exactly 57 values but got {len(block_values)}. Please provide exactly 57 values.")
     
     tensor_dict = safetensors.torch.load_file(input_file)
-    single_block_prefix = "transformer.single_transformer_blocks."
-    double_block_prefix = "transformer.transformer_blocks."
+    single_block_prefixes = ["transformer.single_transformer_blocks.", "lora_unet_single_blocks_"]
+    double_block_prefixes = ["transformer.transformer_blocks.", "lora_unet_double_blocks_"]
     filtered_tensors = {}
 
     for name, tensor in tensor_dict.items():
         block_value = None
-        split_name = name.split('.')
 
         try:
             # Check if the name belongs to a single transformer block
-            if single_block_prefix in name:
-                block_num = int(split_name[2])  # Extract block number
+            if any(prefix in name for prefix in single_block_prefixes):
+                if "transformer.single_transformer_blocks." in name:
+                    split_name = name.split('.')
+                    block_num = int(split_name[2])  # Extract block number
+                else:
+                    split_name = name.split('_')
+                    block_num = int(split_name[4])  # Extract block number
+
                 if 0 <= block_num <= 37:
                     block_value = block_values[19 + block_num]  # Single blocks start after double blocks
 
             # Check if the name belongs to a double transformer block
-            elif double_block_prefix in name:
-                block_num = int(split_name[2])  # Extract block number
+            elif any(prefix in name for prefix in double_block_prefixes):
+                if "transformer.transformer_blocks." in name:
+                    split_name = name.split('.')
+                    block_num = int(split_name[2])  # Extract block number
+                else:
+                    split_name = name.split('_')
+                    block_num = int(split_name[4])  # Extract block number
+
                 if 0 <= block_num <= 18:
                     block_value = block_values[block_num]  # Double blocks
 
@@ -165,8 +191,8 @@ def select_target_keywords():
     }
 
     console.print("\n[bold cyan]Select Target Layers:[/bold cyan]")
-    console.print("[bold green]1.[/bold green] lora_A")
-    console.print("[bold green]2.[/bold green] lora_B (default)")
+    console.print("[bold green]1.[/bold green] lora_A or lora_down")
+    console.print("[bold green]2.[/bold green] lora_B or lora_up (default)")
     console.print("[bold green]3.[/bold green] attn")
     console.print("[bold green]4.[/bold green] proj_mlp")
     console.print("[bold green]5.[/bold green] proj_out")
