@@ -45,3 +45,5 @@ A Python tool to filter, adjust, and optionally remove Flux block weights from a
    ```bash
    py adjust_tensors.py
    ```
+## Changelog
+04/10/24 : handles loras with TE trained by kohya (ignore TE, won't adjust them). Also the single and double layer have different names. I think this works. lora_A = lora_down and lora_B = lora_up
