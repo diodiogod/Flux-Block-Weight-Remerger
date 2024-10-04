@@ -187,7 +187,8 @@ def select_target_keywords():
         "3": "attn",
         "4": "proj_mlp",
         "5": "proj_out",
-        "6": "norm"
+        "6": "norm",
+        "7": ".alpha"
     }
 
     console.print("\n[bold cyan]Select Target Layers:[/bold cyan]")
@@ -197,6 +198,7 @@ def select_target_keywords():
     console.print("[bold green]4.[/bold green] proj_mlp")
     console.print("[bold green]5.[/bold green] proj_out")
     console.print("[bold green]6.[/bold green] norm")
+    console.print("[bold green]7.[/bold green] .alpha")
 
     selections = Prompt.ask("\nSelect the layer types to target (comma-separated list, e.g., 2,3 for lora_B and attn)", default="2")
     selected_keywords = [options[opt.strip()] for opt in selections.split(",") if opt.strip() in options]
