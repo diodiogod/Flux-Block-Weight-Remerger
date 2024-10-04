@@ -42,8 +42,6 @@ def filter_layers_by_keywords(tensor_name, selected_keywords):
     # Check if all additional keywords are present
     return all(additional_keyword in tensor_name for additional_keyword in additional_keywords)
 
-
-
 def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=False):
     """Filters and adjusts tensors based on target keywords and optionally removes those set to zero."""
     
@@ -54,6 +52,9 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
     single_block_prefixes = ["transformer.single_transformer_blocks.", "lora_unet_single_blocks_"]
     double_block_prefixes = ["transformer.transformer_blocks.", "lora_unet_double_blocks_"]
     filtered_tensors = {}
+    
+    adjusted_tensors = 0  # Track number of adjusted tensors
+    removed_tensors = 0   # Track number of removed tensors
 
     for name, tensor in tensor_dict.items():
         block_value = None
@@ -92,20 +93,27 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
             if block_value == 0:
                 if remove_tensors:
                     console.print(f"[bold red]Removed {name}[/bold red]")
+                    removed_tensors += 1  # Track removed tensors
                     continue  # Skip adding this tensor to the filtered dict (i.e., remove it)
                 else:
                     console.print(f"[bold yellow]Set {name} to zero strength (effectively removed)[/bold yellow]")
                     tensor = torch.zeros_like(tensor)  # Set tensor to zeros
+                    adjusted_tensors += 1  # Track adjusted tensors
             elif block_value < 1:
                 console.print(f"[bold yellow]Adjusted {name} by a factor of {block_value}[/bold yellow]")
                 tensor = tensor * block_value  # Adjust the weight
+                adjusted_tensors += 1  # Track adjusted tensors
 
             filtered_tensors[name] = tensor
         else:
             # Keep non-targeted layers unchanged
             filtered_tensors[name] = tensor
 
+    # Report the results
     console.print(f"[green]{len(filtered_tensors)} tensors kept out of {len(tensor_dict)}.")
+    console.print(f"[green]Filtered and adjusted {adjusted_tensors + removed_tensors} tensors "
+                  f"({adjusted_tensors} adjusted, {removed_tensors} removed).")
+    
     safetensors.torch.save_file(filtered_tensors, output_file)
     console.print(f"[bold green]Filtered and adjusted tensors saved to {output_file}.[/bold green]")
 
@@ -135,7 +143,8 @@ def display_lora_files(input_folder):
     return files
 
 def get_block_values():
-    """Prompt the user for block values or preset selection, supporting both 19 and 57 block inputs."""
+    """Prompt the user for block values or preset selection, supporting both 19 and 57 block inputs, and valueALL."""
+    
     preset_options = {
         "1": "1,1,1,1,1,1,1,1,0.25,0.25,0.25,0.5,0.5,0.5,0.5,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.25,0.25,0.25,0.25,0.25,0.25,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0,0,0,0,0,0",
         "2": "1,1,0.5,0.5,1,1,0,0,0.25,0.25,0.5,0.5,0.5,0.5,1,1,0,0,0,1,1,0.75,0.75,0.5,0.5,0.5,0.5,1,1,1,1,0.75,0.75,0.25,0.25,0,0,0,0.25,0.25,0.25,0.5,0.5,0.5,0.5,1,1,0,0,0,0,0,0,0,0",
@@ -154,8 +163,22 @@ def get_block_values():
         return parse_block_values(preset_options[preset_choice])
     else:
         while True:
-            block_values_str = Prompt.ask("\nEnter the 19 or 57 block values separated by commas (e.g., 1,1,0.5,...): ")
+            block_values_str = Prompt.ask("\nEnter the 19 or 57 block values separated by commas (e.g., 1,1,0.5,...) or 'valueALL' to apply a single value to all blocks: ")
+
+            # Strip whitespace and check for 'ALL'
+            block_values_str = block_values_str.strip()
+
+            # Check for 'valueALL' format (e.g., '2ALL')
+            if block_values_str.endswith("ALL"):
+                try:
+                    value = float(block_values_str[:-3].strip())  # Extract the numeric value before 'ALL'
+                    return [value] * 57  # Apply the same value to all 57 blocks
+                except ValueError:
+                    console.print("[bold red]Invalid format for ALL input. Expected a number followed by 'ALL'.[/bold red]")
+                    continue
+
             try:
+                # Process comma-separated input
                 block_values_input = [float(x.strip()) for x in block_values_str.split(",")]
                 num_values = len(block_values_input)
                 if num_values not in [19, 57]:
@@ -173,10 +196,10 @@ def get_block_values():
                         block_values[20 + i * 2] = val
 
                     console.print(f"\n[bold yellow]This will proceed with the corresponding 57 values:[/bold yellow] {','.join(map(lambda x: str(int(x)) if x.is_integer() else str(x), block_values))}")
-
                     return block_values
             except ValueError:
                 console.print("[bold red]Invalid input. Please enter numeric values separated by commas.[/bold red]")
+
 
 
 def select_target_keywords():
