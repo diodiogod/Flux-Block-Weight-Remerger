@@ -1,0 +1,15 @@
+# Ignore all .safetensors files in INPUT and OUTPUT
+INPUT/*.safetensors
+OUTPUT/*.safetensors
+
+# Ignore virtual environments if you're using one
+venv/
+env/
+
+# Ignore Python bytecode
+__pycache__/
+*.pyc
+
+# Ignore logs and temp files
+*.log
+*.tmp
