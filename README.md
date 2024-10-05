@@ -14,7 +14,10 @@ A Python tool to filter, adjust, and optionally remove Flux block weights from a
 - **Filter Layers:** Select and adjust specific layers based on keywords: 'lora_B', 'lora_A', 'proj_mlp', 'proj_out', 'attn', 'norm' - the default is all 'lora_B' layers.
   > I have no idea if this is correct, but it's what gave me in my testings the closest result to changing the block weights in Forge or ComfyUi.
 
-## Installation
+## Automatic Installation for Windows
+1. Double click the "start_windows.bat" file
+
+## Manual Installation
 
 1. **Clone the Repository**:
    ```bash
