@@ -122,11 +122,12 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
             # Keep non-targeted layers unchanged
             filtered_tensors[name] = tensor
 
-    # Report the results
-    console.print(f"[green]{len(filtered_tensors)} tensors kept out of {len(tensor_dict)}.")
-    console.print(f"[green]Filtered and adjusted {adjusted_tensors + removed_tensors} tensors "
-                  f"({adjusted_tensors} adjusted, {removed_tensors} removed).")
+    # If no tensors were adjusted or removed, warn the user and skip saving the file
+    if adjusted_tensors == 0 and removed_tensors == 0:
+        console.print(f"[bold red]No tensors were adjusted or removed. Try different keywords for better matching.[/bold red]")
+        return  # Exit early, skip saving and logging
     
+    # Save the adjusted tensors only if changes were made
     safetensors.torch.save_file(filtered_tensors, output_file)
     console.print(f"[bold green]Filtered and adjusted tensors saved to {output_file}.[/bold green]")
 
@@ -147,6 +148,7 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
         log_writer.writerow([current_time, lora_name, block_values, target_filter, "Removed" if remove_tensors else "Adjusted", adjusted_tensors, removed_tensors])
 
     console.print(f"[bold cyan]Log updated: {log_file}[/bold cyan]")
+
     
 def parse_block_values(block_values_str):
     try:
