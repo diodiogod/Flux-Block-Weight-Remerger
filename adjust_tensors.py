@@ -12,38 +12,40 @@ console = Console()
 
 def filter_layers_by_keywords(tensor_name, selected_keywords):
     """
-    Checks if the tensor name contains the core keywords (e.g., lora_A, lora_B, lora_down, lora_up)
-    and all additional keywords (e.g., attn, norm).
-    If no core keywords are selected, it matches only the additional keywords.
+    Checks if the tensor name contains core keywords (e.g., lora_A, lora_B, lora_up, lora_down)
+    and additional keywords (e.g., attn, norm, proj_out, proj_mlp).
+    It handles both the old format (transformer blocks) and the new format (unet blocks).
+
+    The logic works as follows:
+    - If no 'lora_A' or 'lora_B' is selected, the function matches any of the additional keywords (OR logic).
+    - If 'lora_A' or 'lora_B' is selected, the function ensures that one of these core keywords is present AND one or more additional keywords match (AND-OR logic).
     """
+
     # Map old keywords to new ones
     keyword_mapping = {
-        "lora_A": ["lora_A", "lora_down"],
-        "lora_B": ["lora_B", "lora_up"]
+        "lora_A": ["lora_A", "lora_down"],  # lora_A maps to both lora_A and lora_down
+        "lora_B": ["lora_B", "lora_up"]     # lora_B maps to both lora_B and lora_up
     }
 
     # Expand selected keywords based on the mapping
     expanded_keywords = []
     for kw in selected_keywords:
         if kw in keyword_mapping:
-            expanded_keywords.extend(keyword_mapping[kw])
+            expanded_keywords.extend(keyword_mapping[kw])  # Expand lora_A or lora_B to both formats
         else:
-            expanded_keywords.append(kw)
+            expanded_keywords.append(kw)  # Append additional keywords directly
 
-    # Separate core keywords (lora_A, lora_B, lora_donw, lora_up) from additional keywords (attn, norm)
+    # Separate core keywords (lora_A, lora_B, lora_down, lora_up) from additional keywords (attn, norm, proj_out, proj_mlp)
     core_keywords = [kw for kw in expanded_keywords if 'lora_' in kw]
     additional_keywords = [kw for kw in expanded_keywords if 'lora_' not in kw]
 
-    # If no core keywords are selected, just match additional keywords
+    # If no core keywords (lora_A or lora_B) are selected, match any of the additional keywords (OR logic)
     if not core_keywords:
-        return all(additional_keyword in tensor_name for additional_keyword in additional_keywords)
+        return any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
 
-    # If core keywords are selected, at least one core keyword must be present
-    if not any(core_keyword in tensor_name for core_keyword in core_keywords):
-        return False
-
-    # Check if all additional keywords are present
-    return all(additional_keyword in tensor_name for additional_keyword in additional_keywords)
+    # If core keywords (lora_A or lora_B) are selected, match a core keyword AND any additional keyword (AND-OR logic)
+    return any(core_keyword in tensor_name for core_keyword in core_keywords) and \
+           any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
 
 def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=False):
     """Filters and adjusts tensors based on target keywords and optionally removes those set to zero."""
