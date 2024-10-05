@@ -15,7 +15,13 @@ A Python tool to filter, adjust, and optionally remove Flux block weights from a
   > I have no idea if this is correct, but it's what gave me in my testings the closest result to changing the block weights in Forge or ComfyUi.
 
 ## Automatic Installation for Windows
-1. Double click the "start_windows.bat" file
+
+1. **Clone the Repository**:
+   ```bash
+   git clone https://github.com/diodiogod/Flux-Block-Weight-Remerger
+   cd Flux-Block-Weight-Remerger
+   ```
+2. Double click the "start_windows.bat" file
 
 ## Manual Installation
 
