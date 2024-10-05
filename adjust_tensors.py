@@ -1,6 +1,9 @@
 import safetensors.torch
 import torch
 import os
+import csv
+import datetime
+
 from rich.console import Console
 from rich.table import Table
 from rich.prompt import Prompt, IntPrompt
@@ -117,7 +120,24 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
     safetensors.torch.save_file(filtered_tensors, output_file)
     console.print(f"[bold green]Filtered and adjusted tensors saved to {output_file}.[/bold green]")
 
+    # Logging the process to CSV
+    log_file = "log.csv"
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    lora_name = os.path.basename(output_file)  # Use the saved LoRA file name (output_file)
+    target_filter = ", ".join(target_keywords)  # Convert target keywords to a readable string
+    
+    # Check if log.csv exists, if not, create it with the header
+    log_exists = os.path.isfile(log_file)
+    with open(log_file, "a", newline='') as csvfile:
+        log_writer = csv.writer(csvfile, delimiter=',')
+        if not log_exists:
+            # Write header
+            log_writer.writerow(["Date", "LoRA File", "Block Values", "Target Filter", "Mode (Adjusted/Removed)", "Adjusted Tensors", "Removed Tensors"])
+        # Write the log entry
+        log_writer.writerow([current_time, lora_name, block_values, target_filter, "Removed" if remove_tensors else "Adjusted", adjusted_tensors, removed_tensors])
 
+    console.print(f"[bold cyan]Log updated: {log_file}[/bold cyan]")
+    
 def parse_block_values(block_values_str):
     try:
         block_values = [float(value) for value in block_values_str.split(",")]
