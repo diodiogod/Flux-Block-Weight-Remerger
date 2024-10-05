@@ -8,7 +8,7 @@ A Python tool to filter, adjust, and optionally remove Flux block weights from a
 
 ## Features
 
-- **Adjust Weights:** Adjust weights for blocks and layers according to provided values (19 or 57 comma separated format).
+- **Adjust Weights:** Adjust weights for blocks and layers according to provided values (19 or 57 comma separated format). see: https://github.com/nihedon/sd-webui-lora-block-weight/issues/2#issuecomment-2390632995
 - **Zero-out Weights:** Optionally remove layers that have their weights set to zero.
   > I don't know if removing leads to problems. It defaults to keep all layers.
 - **Filter Layers:** Select and adjust specific layers based on keywords: 'lora_B', 'lora_A', 'proj_mlp', 'proj_out', 'attn', 'norm' - the default is all 'lora_B' layers.
