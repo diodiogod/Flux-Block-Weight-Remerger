@@ -14,38 +14,46 @@ def filter_layers_by_keywords(tensor_name, selected_keywords):
     """
     Checks if the tensor name contains core keywords (e.g., lora_A, lora_B, lora_up, lora_down)
     and additional keywords (e.g., attn, norm, proj_out, proj_mlp).
-    It handles both the old format (transformer blocks) and the new format (unet blocks).
-
+    
     The logic works as follows:
-    - If no 'lora_A' or 'lora_B' is selected, the function matches any of the additional keywords (OR logic).
-    - If 'lora_A' or 'lora_B' is selected, the function ensures that one of these core keywords is present AND one or more additional keywords match (AND-OR logic).
+    - If only 'lora_A' or 'lora_B' is selected, match layers containing those keywords.
+    - If 'lora_A' and an additional keyword (like 'attn') are selected, match layers containing both.
+    - If only additional keywords are selected, match layers containing any of those keywords.
     """
 
     # Map old keywords to new ones
     keyword_mapping = {
-        "lora_A": ["lora_A", "lora_down"],  # lora_A maps to both lora_A and lora_down
-        "lora_B": ["lora_B", "lora_up"]     # lora_B maps to both lora_B and lora_up
+        "lora_A": ["lora_A", "lora_down"],
+        "lora_B": ["lora_B", "lora_up"]
     }
 
     # Expand selected keywords based on the mapping
     expanded_keywords = []
     for kw in selected_keywords:
         if kw in keyword_mapping:
-            expanded_keywords.extend(keyword_mapping[kw])  # Expand lora_A or lora_B to both formats
+            expanded_keywords.extend(keyword_mapping[kw])
         else:
-            expanded_keywords.append(kw)  # Append additional keywords directly
+            expanded_keywords.append(kw)
 
-    # Separate core keywords (lora_A, lora_B, lora_down, lora_up) from additional keywords (attn, norm, proj_out, proj_mlp)
+    # Separate core keywords and additional keywords
     core_keywords = [kw for kw in expanded_keywords if 'lora_' in kw]
     additional_keywords = [kw for kw in expanded_keywords if 'lora_' not in kw]
 
-    # If no core keywords (lora_A or lora_B) are selected, match any of the additional keywords (OR logic)
-    if not core_keywords:
-        return any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
+    # Logic for filtering based on selected keywords
+    if core_keywords:
+        # If core keywords are present
+        core_match = any(core_keyword in tensor_name for core_keyword in core_keywords)
+        
+        if additional_keywords:
+            # If both core and additional keywords are selected, ensure both match
+            additional_match = any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
+            return core_match and additional_match  # AND logic
+        else:
+            return core_match  # Only core keywords are checked
 
-    # If core keywords (lora_A or lora_B) are selected, match a core keyword AND any additional keyword (AND-OR logic)
-    return any(core_keyword in tensor_name for core_keyword in core_keywords) and \
-           any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
+    # If no core keywords are selected, match any of the additional keywords (OR logic)
+    return any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
+
 
 def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=False):
     """Filters and adjusts tensors based on target keywords and optionally removes those set to zero."""
@@ -101,7 +109,7 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
                     removed_tensors += 1  # Track removed tensors
                     continue  # Skip adding this tensor to the filtered dict (i.e., remove it)
                 else:
-                    console.print(f"[bold yellow]Set {name} to zero strength (effectively removed)[/bold yellow]")
+                    console.print(f"[bold red]Set {name} to zero strength (not removed just set to 0)[/bold red]")
                     tensor = torch.zeros_like(tensor)  # Set tensor to zeros
                     adjusted_tensors += 1  # Track adjusted tensors
             elif block_value < 1:
@@ -164,43 +172,56 @@ def display_lora_files(input_folder):
     console.print(table)
     return files
 
-def get_block_values():
-    """Prompt the user for block values or preset selection, supporting both 19 and 57 block inputs, and valueALL."""
+def load_presets_from_file():
+    """Loads presets from the preset_options.txt file using tab-separated values."""
+    presets = {}
+    preset_file = os.path.join(os.path.dirname(__file__), "preset_options.txt")
     
-    preset_options = {
-        "1": "1,1,1,1,1,1,1,1,0.25,0.25,0.25,0.5,0.5,0.5,0.5,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.25,0.25,0.25,0.25,0.25,0.25,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0,0,0,0,0,0",
-        "2": "1,1,0.5,0.5,1,1,0,0,0.25,0.25,0.5,0.5,0.5,0.5,1,1,0,0,0,1,1,0.75,0.75,0.5,0.5,0.5,0.5,1,1,1,1,0.75,0.75,0.25,0.25,0,0,0,0.25,0.25,0.25,0.5,0.5,0.5,0.5,1,1,0,0,0,0,0,0,0,0",
-        "3": "1,1,1,1,1,1,1,1,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0.5,0,0,0,0,0,0,0,0"
-    }
+    if os.path.exists(preset_file):
+        with open(preset_file, "r") as file:
+            preset_num = 2  # Start numbering from 2, reserving 1 for custom input
+            for line in file:
+                parts = line.strip().split("\t")  # Split by tab character
+                if len(parts) >= 3:  # Ensure the format is valid
+                    preset_name = parts[1]  # Preset name
+                    preset_values = parts[2]  # Block values as a string (already comma-separated in the file)
+                    presets[str(preset_num)] = (preset_name, preset_values)
+                    preset_num += 1  # Increment the preset number for the next preset
+    return presets
 
+
+def get_block_values():
+    """Prompt the user for block values or preset selection, supporting both 19 and 57 block inputs."""
+
+    # Load dynamic presets from file
+    presets = load_presets_from_file()
+
+    # Display option for custom input as "1"
     console.print("\n[bold cyan]Available Presets:[/bold cyan]")
-    console.print("[bold green]1.[/bold green] Default Preset 1 (This worked ok for a real person lora)")
-    console.print("[bold green]2.[/bold green] Default Preset 2 (ignore, placeholder)")
-    console.print("[bold green]3.[/bold green] Default Preset 3 (ignore, placeholder)")
-    console.print("[bold green]4.[/bold green] Custom Values")
+    console.print("[bold green]1.[/bold green] Custom Values")
 
-    preset_choice = Prompt.ask("\nChoose a preset or enter [bold yellow]4[/bold yellow] for custom input", choices=["1", "2", "3", "4"])
+    # Print all dynamically loaded presets starting from "2"
+    for preset_num, (preset_name, _) in presets.items():
+        console.print(f"[bold green]{preset_num}.[/bold green] {preset_name}")
 
-    if preset_choice in preset_options:
-        return parse_block_values(preset_options[preset_choice])
+    # Default to "1" (Custom Values) if the user presses enter
+    preset_choice = Prompt.ask("\nChoose a preset or enter [bold yellow]1[/bold yellow] for custom input", 
+                               choices=["1"] + list(presets.keys()), default="1")
+
+    if preset_choice in presets:
+        # Parse the block values from the selected preset
+        preset_name, preset_values = presets[preset_choice]
+        
+        # Debug print: Show the retrieved values before processing
+        console.print(f"\n[bold cyan]Selected Preset:[/bold cyan] {preset_name}")
+        console.print(f"[bold green]Using Block Values:[/bold green] {preset_values}")
+        
+        return parse_block_values(preset_values)
     else:
+        # If "1" is selected or defaulted, prompt for custom input
         while True:
-            block_values_str = Prompt.ask("\nEnter the 19 or 57 block values separated by commas (e.g., 1,1,0.5,...) or 'valueALL' to apply a single value to all blocks: ")
-
-            # Strip whitespace and check for 'ALL'
-            block_values_str = block_values_str.strip()
-
-            # Check for 'valueALL' format (e.g., '2ALL')
-            if block_values_str.endswith("ALL"):
-                try:
-                    value = float(block_values_str[:-3].strip())  # Extract the numeric value before 'ALL'
-                    return [value] * 57  # Apply the same value to all 57 blocks
-                except ValueError:
-                    console.print("[bold red]Invalid format for ALL input. Expected a number followed by 'ALL'.[/bold red]")
-                    continue
-
+            block_values_str = Prompt.ask("\nEnter the 19 or 57 block values separated by commas (e.g., 1,1,0.5,...): ")
             try:
-                # Process comma-separated input
                 block_values_input = [float(x.strip()) for x in block_values_str.split(",")]
                 num_values = len(block_values_input)
                 if num_values not in [19, 57]:
@@ -221,7 +242,6 @@ def get_block_values():
                     return block_values
             except ValueError:
                 console.print("[bold red]Invalid input. Please enter numeric values separated by commas.[/bold red]")
-
 
 
 def select_target_keywords():
@@ -319,6 +339,6 @@ if __name__ == "__main__":
         filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=remove_tensors)
 
         # Ask if the user wants to process another file
-        process_another = Prompt.ask("\nDo you want to process another LoRA file?", choices=["yes", "no"], default="no")
+        process_another = Prompt.ask("\nDo you want to process another LoRA file?", choices=["yes", "no"], default="yes")
         if process_another == "no":
             break  # Exit the loop if the user chooses not to process another file
