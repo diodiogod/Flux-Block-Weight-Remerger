@@ -16,11 +16,7 @@ A Python tool to filter, adjust, and optionally remove Flux block weights from a
 
 ## Automatic Installation for Windows
 
-1. **Clone the Repository**:
-   ```bash
-   git clone https://github.com/diodiogod/Flux-Block-Weight-Remerger
-   cd Flux-Block-Weight-Remerger
-   ```
+1. Download the Repository
 2. Double click the "start_windows.bat" file
 
 ## Manual Installation
