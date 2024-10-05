@@ -190,6 +190,17 @@ def load_presets_from_file():
     return presets
 
 
+def map_19_to_57(block_values_input):
+    """Maps 19 block values to the 57-value format."""
+    block_values = [0] * 57
+    for i in range(19):
+        block_values[i] = block_values_input[i]
+    for i, val in enumerate(block_values_input):
+        block_values[19 + i * 2] = val
+        block_values[20 + i * 2] = val
+    return block_values
+
+
 def get_block_values():
     """Prompt the user for block values or preset selection, supporting both 19 and 57 block inputs."""
 
@@ -212,11 +223,11 @@ def get_block_values():
         # Parse the block values from the selected preset
         preset_name, preset_values = presets[preset_choice]
         
-        # Debug print: Show the retrieved values before processing
         console.print(f"\n[bold cyan]Selected Preset:[/bold cyan] {preset_name}")
         console.print(f"[bold green]Using Block Values:[/bold green] {preset_values}")
         
-        return parse_block_values(preset_values)
+        block_values_input = parse_block_values(preset_values)
+        num_values = len(block_values_input)
     else:
         # If "1" is selected or defaulted, prompt for custom input
         while True:
@@ -227,21 +238,17 @@ def get_block_values():
                 if num_values not in [19, 57]:
                     console.print(f"[bold red]Expected 19 or 57 values, but got {num_values}. Please try again.[/bold red]")
                     continue
-
-                if num_values == 57:
-                    return block_values_input
-                elif num_values == 19:
-                    block_values = [0] * 57
-                    for i in range(19):
-                        block_values[i] = block_values_input[i]
-                    for i, val in enumerate(block_values_input):
-                        block_values[19 + i * 2] = val
-                        block_values[20 + i * 2] = val
-
-                    console.print(f"\n[bold yellow]This will proceed with the corresponding 57 values:[/bold yellow] {','.join(map(lambda x: str(int(x)) if x.is_integer() else str(x), block_values))}")
-                    return block_values
+                break
             except ValueError:
                 console.print("[bold red]Invalid input. Please enter numeric values separated by commas.[/bold red]")
+
+    # Return 57 values regardless of input format
+    if num_values == 57:
+        return block_values_input
+    elif num_values == 19:
+        block_values = map_19_to_57(block_values_input)
+        console.print(f"\n[bold yellow]This will proceed with the corresponding 57 values:[/bold yellow] {','.join(map(lambda x: str(int(x)) if x.is_integer() else str(x), block_values))}")
+        return block_values
 
 
 def select_target_keywords():
