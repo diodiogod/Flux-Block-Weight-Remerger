@@ -6,5 +6,5 @@ def print_tensor_names(input_file):
         print(name)
 
 if __name__ == "__main__":
-    input_file = "J:/Aitools/Flux-Block-Weight-Remerger/INPUT/Male Ass Flux v4c-000001.safetensors"  # Replace with your LoRA safetensors path
+    input_file = "J:/Aitools/Flux-Block-Weight-Remerger/INPUT/Aric_Flux_Ex45_L1.safetensors"  # Replace with your LoRA safetensors path
     print_tensor_names(input_file)

@@ -112,9 +112,16 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
                     console.print(f"[bold red]Set {name} to zero strength (not removed just set to 0)[/bold red]")
                     tensor = torch.zeros_like(tensor)  # Set tensor to zeros
                     adjusted_tensors += 1  # Track adjusted tensors
+            elif block_value == 1.0:
+                # Block was not adjusted because its value is 1.0
+                console.print(f"[bold white]Block {name} not adjusted (value = 1.0)[/bold white]")  # Neutral color
             elif block_value < 1:
-                console.print(f"[bold yellow]Adjusted {name} by a factor of {block_value}[/bold yellow]")
-                tensor = tensor * block_value  # Adjust the weight
+                console.print(f"[bold yellow]Adjusted {name} by a factor of {block_value} (lower)[/bold yellow]")
+                tensor = tensor * block_value  # Adjust the weight down
+                adjusted_tensors += 1  # Track adjusted tensors
+            elif block_value > 1:
+                console.print(f"[bold green]Adjusted {name} by a factor of {block_value} (higher)[/bold green]")
+                tensor = tensor * block_value  # Adjust the weight up
                 adjusted_tensors += 1  # Track adjusted tensors
 
             filtered_tensors[name] = tensor
