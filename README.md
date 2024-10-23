@@ -13,8 +13,8 @@ A Python tool to filter, adjust, and optionally remove Flux block weights from a
   > I don't know if removing leads to problems. It defaults to keep all layers.
 - **Filter Layers:** Select and adjust specific layers based on keywords: 'lora_B', 'lora_A', 'proj_mlp', 'proj_out', 'attn', 'norm' - the default is all 'lora_B' layers.
   > I have no idea if this is correct, but it's what gave me in my testings the closest result to changing the block weights in Forge or ComfyUi.
-  > You can save your presets on the preset_options.txt file. 19 or 57 format.
-  > Keep track of all loras adjusted on a log.csv file.
+- **Presets:** You can save your presets on the preset_options.txt file. 19 or 57 format.
+- **Log:** Keep track of all loras adjusted on a log.csv file.
 
 ## Automatic Installation for Windows
 
