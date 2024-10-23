@@ -5,6 +5,16 @@ echo Logging errors to %LOGFILE%
 echo If you run this script for the first time, it may take some time.
 echo ------------------------------------------------------------------
 
+:: Pull latest changes from the repository
+echo Pulling latest changes from the repository...
+git pull >> %LOGFILE% 2>&1
+if %ERRORLEVEL% NEQ 0 (
+    echo Failed to pull the latest changes from the repository. Please check your git configuration.
+    echo %date% %time% - Failed to pull from git >> %LOGFILE%
+    pause
+    exit /b 1
+)
+
 :: Check if Python is installed
 where python >nul 2>nul || (
     echo Python is not installed. Please install Python 3.6+ to continue.
