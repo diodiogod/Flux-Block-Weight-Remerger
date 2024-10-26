@@ -261,7 +261,7 @@ def get_block_values():
 
 
 def select_target_keywords():
-    """Prompt the user to select which layer types to target."""
+    """Prompt the user to select which layer types to target. Choose .alpha for LoRAs trained with kohya_ss"""
     options = {
         "1": "lora_A",
         "2": "lora_B",
