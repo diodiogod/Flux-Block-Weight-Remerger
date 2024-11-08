@@ -55,7 +55,7 @@ def filter_layers_by_keywords(tensor_name, selected_keywords):
     return any(additional_keyword in tensor_name for additional_keyword in additional_keywords)
 
 
-def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=False):
+def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=False, preset_name="custom"):
     """Filters and adjusts tensors based on target keywords and optionally removes those set to zero."""
     
     if len(block_values) != 57:
@@ -150,9 +150,9 @@ def filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_
         log_writer = csv.writer(csvfile, delimiter=',')
         if not log_exists:
             # Write header
-            log_writer.writerow(["Date", "LoRA File", "Block Values", "Target Filter", "Mode (Adjusted/Removed)", "Adjusted Tensors", "Removed Tensors"])
-        # Write the log entry
-        log_writer.writerow([current_time, lora_name, block_values, target_filter, "Removed" if remove_tensors else "Adjusted", adjusted_tensors, removed_tensors])
+            log_writer.writerow(["Date", "LoRA File", "Block Values", "Target Filter", "Preset Name", "Mode (Adjusted/Removed)", "Adjusted Tensors", "Removed Tensors"])
+        # Write the log entry, adding preset_name
+        log_writer.writerow([current_time, lora_name, block_values, target_filter, preset_name, "Removed" if remove_tensors else "Adjusted", adjusted_tensors, removed_tensors])
 
     console.print(f"[bold cyan]Log updated: {log_file}[/bold cyan]")
 
@@ -239,6 +239,7 @@ def get_block_values():
         num_values = len(block_values_input)
     else:
         # If "1" is selected or defaulted, prompt for custom input
+        preset_name = "Custom"
         while True:
             block_values_str = Prompt.ask("\nEnter the 19 or 57 block values separated by commas (e.g., 1,1,0.5,...): ")
             try:
@@ -253,11 +254,11 @@ def get_block_values():
 
     # Return 57 values regardless of input format
     if num_values == 57:
-        return block_values_input
+        return block_values_input, preset_name
     elif num_values == 19:
         block_values = map_19_to_57(block_values_input)
         console.print(f"\n[bold yellow]This will proceed with the corresponding 57 values:[/bold yellow] {','.join(map(lambda x: str(int(x)) if x.is_integer() else str(x), block_values))}")
-        return block_values
+        return block_values, preset_name
 
 
 def select_target_keywords():
@@ -343,7 +344,7 @@ if __name__ == "__main__":
         console.print(f"\n[bold yellow]Saving as '{output_file}'[/bold yellow]")
 
         # Ask the user for the 57 block values (use preset or custom input)
-        block_values = get_block_values()
+        block_values, preset_name = get_block_values()
 
         # Ask the user if they want to remove tensors that are set to 0
         remove_tensors = Prompt.ask("\nDo you want to [bold red]remove tensors[/bold red] that are set to 0 (instead of setting their weights to zero)?", choices=["yes", "no"], default="no") == "yes"
@@ -352,7 +353,7 @@ if __name__ == "__main__":
         target_keywords = select_target_keywords()
 
         # Run the adjustment with or without removing tensors and based on selected keywords
-        filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=remove_tensors)
+        filter_and_adjust_proj_blocks(input_file, output_file, block_values, target_keywords, remove_tensors=remove_tensors, preset_name=preset_name)
 
         # Ask if the user wants to process another file
         process_another = Prompt.ask("\nDo you want to process another LoRA file?", choices=["yes", "no"], default="yes")
