@@ -1,6 +1,6 @@
 # Ignore all .safetensors files in INPUT and OUTPUT
-INPUT/*.safetensors
-OUTPUT/*.safetensors
+INPUT/
+OUTPUT/
 
 # Ignore virtual environments if you're using one
 venv/
@@ -14,6 +14,7 @@ __pycache__/
 *.log
 *.tmp
 *.csv
+*.sha256
 script_log.txt
 missing_packages.txt
 installed_packages.txt
